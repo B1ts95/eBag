@@ -1,9 +1,5 @@
 local meta = FindMetaTable("Player")
 
-/*---------------------------------------------------------------------------
-Functions
----------------------------------------------------------------------------*/
--- workaround: GetNetworkVars doesn't give entities because the /duplicator/ doesn't want to save entities
 local function getDTVars(ent)
 	if not ent.GetNetworkVars then return nil end
 	local name, value = debug.getupvalue(ent.GetNetworkVars, 1)
@@ -23,6 +19,15 @@ end
 local function serialize(ent)
 	local serialized = duplicator.CopyEntTable(ent)
 	serialized.DT = getDTVars(ent)
+	serialized.printerPocket = ent.printerPocket or {}
+	serialized.ownCooler = ent.ownCooler or false;
+	serialized.ownAmount = ent.ownAmount or false;
+	serialized.ownTimer = ent.ownTimer or false;
+	serialized.ownSilencer = ent.ownSilencer or false;
+	serialized.ownArmor = ent.ownArmor or false;
+	serialized.ownStealing = ent.ownStealing or false;
+	serialized.owner = ent.owner or ""
+	serialized.StoredMoney = ent.StoredMoney or 0
 
 	return serialized
 end
@@ -30,6 +35,15 @@ end
 local function deserialize(ply, item)
 	local ent = ents.Create(item.Class)
 	duplicator.DoGeneric(ent, item)
+	ent.printerPocket = item.printerPocket
+	ent.ownCooler = item.ownCooler
+	ent.ownAmount = item.ownAmount
+	ent.ownTimer = item.ownTimer
+	ent.ownSilencer = item.ownSilencer
+	ent.ownArmor = item.ownArmor
+	ent.ownStealing = item.ownStealing
+	ent.owner = item.owner
+	ent.StoredMoney = item.StoredMoney
 	ent:Spawn()
 
 	duplicator.DoGenericPhysics(ent, ply, item)
@@ -57,29 +71,6 @@ local function dropAllPrintersItems(ply)
 		ply:dropPrinter(k)
 		ply:SetNWInt("holding", 0)
 	end
-end
-
-function printerName(ent)
-	if ent == "money_printer2" 		then return Prc.PrinterName2
-	elseif ent == "money_printer0" 	then return Prc.PrinterName
-	elseif ent == "money_printer3" 	then return Prc.printerName3
-	elseif ent == "money_printer4" 	then return Prc.printerName4
-	elseif ent == "money_printer5" 	then return Prc.printerName5	
-	elseif ent == "money_printer6" 	then return Prc.printerName6
-	elseif ent == "money_printer7" 	then return Prc.printerName7
-	elseif ent == "money_printer8" 	then return Prc.printerName8
-	elseif ent == "money_printer9" 	then return Prc.printerName9
-	elseif ent == "money_printer10"	then return Prc.printerName10
-	end
-end
-
-function meta:getPrinters()
-	local result = {}
-	for k,v in pairs(self.printerPocket or {}) do
-		table.insert(result, printerName(v.Class))
-	end
-	result = table.concat(result, "\n");
-	return result
 end
 
 util.AddNetworkString("Printer_Pocket")
@@ -115,6 +106,7 @@ function meta:removePrinter(item)
 
 	self.printerPocket[item] = nil
 	sendPPrintersItems(self)
+
 end
 
 function meta:dropPrinter(item)
@@ -123,18 +115,11 @@ function meta:dropPrinter(item)
 	local id = self.printerPocket[item]
 	local ent = deserialize(self, id)
 
-	ent.USED = nil
-
-	hook.Call("onPocketItemDropped", nil, self, ent, item, id)
-
 	self:removePrinter(item)
 	ent:Spawn()
 	return ent
 end
 
-
-
--- serverside implementation
 function meta:getPPrintersItems()
 	self.printerPocket = self.printerPocket or {}
 
@@ -149,19 +134,12 @@ function meta:getPPrintersItems()
 	return res
 end
 
-/*---------------------------------------------------------------------------
-Commands
----------------------------------------------------------------------------*/
 util.AddNetworkString("DarkRP_spawnPrinterPocket")
 net.Receive("DarkRP_spawnPrinterPocket", function(len, ply)
 	local item = net.ReadFloat()
 	if not ply.printerPocket[item] then return end
 	ply:dropPrinter(item)
 end)
-
-/*---------------------------------------------------------------------------
-Hooks
----------------------------------------------------------------------------*/
 
 local function onAdded(ply, ent, serialized)
 	if not ent:IsValid() or not ent.DarkRPItem or not ent.Getowning_ent or not IsValid(ent:Getowning_ent()) then return end
@@ -171,6 +149,8 @@ local function onAdded(ply, ent, serialized)
 
 	ply:addCustomEntity(ent.DarkRPItem)
 end
+
+
 hook.Add("onPrinterItemAdded", "defaultImplementation", onAdded)
 
 local function canHoldPrinter(ply, item)
@@ -204,8 +184,6 @@ local function canHoldPrinter(ply, item)
 
 end
 hook.Add("canHoldPrinter", "defaultRestrictions", canHoldPrinter)
-
--- Drop printers when:
 
 hook.Add("PlayerDeath", "DropPrinters", function(ply)
 	if not Bag.DropPrintersOnDead or not ply.printerPocket then return end
