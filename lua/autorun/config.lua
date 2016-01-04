@@ -1,4 +1,4 @@
---[[ PrintersBag by Unknown ]]
+--[[ PrintersBag by B1ts ]]
 
 local plyMeta = FindMetaTable("Player")
 Bag = {}
