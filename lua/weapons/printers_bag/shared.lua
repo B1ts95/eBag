@@ -230,7 +230,7 @@ function SWEP:SecondaryAttack()
 		if Bag.DarkRP24 then
 			GAMEMODE:Notify(self.Owner, 1, 4, Bag.EmptyBag)
 			else 
-				DarkRP.notify(self.Owner, 1, 4, Bag.EmptyBag)
+			DarkRP.notify(self.Owner, 1, 4, Bag.EmptyBag)
 		end
 		return
 	end
